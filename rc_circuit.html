@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Passive Membrane (RC Circuit)</title>
+<style>
+  #rc-container { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: auto; padding: 10px 14px;
+    background: #fdfdfd; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+  h2 { margin: 2px 0 6px; font-size: 18px; }
+  .main { display: flex; gap: 12px; align-items: flex-start; }
+  .left { width: 300px; flex: none; }
+  .btn { padding: 8px 22px; margin: 0 0 6px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;
+    background: #f1c40f; color: #2d3436; font-size: 15px; width: 100%; }
+  .btn:hover { opacity: 0.9; }
+  .control-panel { display: flex; flex-direction: column; gap: 4px; background: #f1f2f6; padding: 6px 10px;
+    margin: 6px 0; border-radius: 8px; border: 1px solid #dfe6e9; }
+  .slider-group { display: flex; flex-direction: column; align-items: stretch; font-size: 12px; font-weight: bold; color: #2c3e50; text-align: left; }
+  .slider-group input { margin: 2px 0; width: 100%; cursor: pointer; }
+  .slider-val { color: #2980b9; }
+  .checks { display: flex; flex-direction: column; gap: 2px; text-align: left; font-size: 12px; font-weight: bold; color: #2c3e50; }
+  .checks label { cursor: pointer; }
+  svg, canvas { border: 1px solid #dfe6e9; border-radius: 8px; display: block; background: #fdfaf6; }
+  svg { width: 300px; height: auto; margin-top: 6px; }
+  canvas { background: #2d3436; flex: 1 1 0; min-width: 0; width: 100%; height: auto; }
+  .info-panel { margin-top: 6px; padding: 6px; background: #dfe6e9; border-radius: 6px; font-size: 13px; font-weight: bold; color: #2d3436; min-height: 18px; }
+  @media (max-width: 720px) { .main { flex-direction: column; align-items: stretch; } .left { width: 100%; } svg { width: 100%; } }
+</style>
+</head>
+<body>
+<div id="rc-container">
+  <h2>Passive Membrane: RC Circuit</h2>
+  <div class="main">
+  <div class="left">
+  <button id="btn-inject" class="btn">Inject Current</button>
+
+  <div class="control-panel">
+    <div class="slider-group">
+      <label>R<sub>m</sub>: <span id="val-rm" class="slider-val"></span> MΩ</label>
+      <input type="range" id="slider-rm" min="10" max="300" step="10" value="100">
+    </div>
+    <div class="slider-group">
+      <label>C<sub>m</sub>: <span id="val-cm" class="slider-val"></span>       pF</label>
+            <input type="range" id="slider-cm" min="50" max="1000" step="50" value="100">
+    </div>
+    <div class="slider-group">
+      <label>I: <span id="val-imax" class="slider-val"></span> pA</label>
+            <input type="range" id="slider-imax" min="10" max="300" step="10" value="100">
+    </div>
+    <div class="slider-group">
+      <label>Duration: <span id="val-dur" class="slider-val"></span> ms</label>
+      <input type="range" id="slider-dur" min="5" max="200" step="5" value="50">
+    </div>
+  </div>
+
+  <div class="checks">
+    <label><input type="checkbox" id="chk-rm"> Remove R<sub>m</sub> (R = ∞, no leak current)</label>
+    <label><input type="checkbox" id="chk-cm"> Remove C<sub>m</sub> (C = 0)</label>
+  </div>
+
+  <svg id="circuit" viewBox="0 0 520 230">
+    <g stroke="#2d3436" stroke-width="2.5" fill="none" stroke-linecap="round">
+      <!-- top wire -->
+      <path d="M60 40 H460"/>
+      <!-- bottom wire -->
+      <path d="M60 190 H460"/>
+      <!-- current source leg -->
+      <path d="M100 40 V70"/><path d="M100 130 V190"/>
+      <!-- capacitor leg -->
+      <path d="M230 40 V93"/><path d="M230 107 V190"/>
+      <!-- resistor leg -->
+      <path d="M360 40 V63"/><path d="M360 137 V190"/>
+    </g>
+    <!-- current source -->
+    <circle id="src" cx="100" cy="100" r="30" fill="#fff" stroke="#2d3436" stroke-width="2.5"/>
+    <path id="src-arrow" d="M100 118 V82 M90 92 L100 82 L110 92" stroke="#2d3436" stroke-width="2.5" fill="none"/>
+    <text x="100" y="150" text-anchor="middle" font-size="14" fill="#2d3436" dy="0"></text>
+    <text x="100" y="28" text-anchor="middle" font-size="24" font-weight="bold" fill="#2d3436">I<tspan font-size="16" dy="5">inj</tspan></text>
+    <!-- capacitor -->
+    <g id="cap">
+      <path d="M205 93 H255" stroke="#2980b9" stroke-width="4"/>
+      <path d="M205 107 H255" stroke="#2980b9" stroke-width="4"/>
+    </g>
+    <text x="230" y="28" text-anchor="middle" font-size="24" font-weight="bold" fill="#2980b9">C<tspan font-size="16" dy="5">m</tspan></text>
+    <!-- resistor -->
+    <path id="res" d="M360 63 l0 8 l-12 8 l24 14 l-24 14 l24 14 l-12 8 l0 8" stroke="#e67e22" stroke-width="3" fill="none" stroke-linejoin="round"/>
+    <text x="360" y="28" text-anchor="middle" font-size="24" font-weight="bold" fill="#e67e22">R<tspan font-size="16" dy="5">m</tspan></text>
+    <!-- cut markers -->
+    <text id="cap-off" x="230" y="100" text-anchor="middle" dominant-baseline="central" font-size="56" font-weight="bold" fill="#c0392b" visibility="hidden">✕</text>
+    <text id="res-off" x="360" y="100" text-anchor="middle" dominant-baseline="central" font-size="56" font-weight="bold" fill="#c0392b" visibility="hidden">✕</text>
+    <!-- output -->
+    <text x="470" y="120" font-size="24" font-weight="bold" fill="#2d3436">V<tspan font-size="16" dy="5">m</tspan></text>
+    <line x1="460" y1="40" x2="460" y2="190" stroke="#2d3436" stroke-width="1.5" stroke-dasharray="4 3"/>
+  </svg>
+
+  </div>
+  <canvas id="scope" width="560" height="400"></canvas>
+  </div>
+  <div class="info-panel" id="info">Press "Inject Current". τ = R<sub>m</sub>·C<sub>m</sub></div>
+</div>
+
+<script>
+const E_REST = 0//-70;          // mV
+const T_PRE = 20;            // ms before current onset
+const T_TOTAL = 500;         // ms, fixed time axis
+// const V_MIN = -80, V_MAX = 20, V_STEP = 20, I_MAX_AXIS = 0.3;   // fixed Y scales
+const V_MIN = 0, V_MAX = 100, V_STEP = 20, I_MAX_AXIS = 0.3;   // fixed Y scales
+const DT = 0.05;             // ms
+const $ = id => document.getElementById(id);
+const canvas = $('scope'), ctx = canvas.getContext('2d');
+
+let sim = null, anim = null;
+
+function params() {
+  // sliders are in pF / pA; internally nF / nA so that MΩ·nF = ms and MΩ·nA = mV
+  return { R: +$('slider-rm').value, C: $('slider-cm').value / 1000, I: $('slider-imax').value / 1000, dur: +$('slider-dur').value,
+           noR: $('chk-rm').checked, noC: $('chk-cm').checked };
+}
+
+function updateLabels() {
+  const p = params();
+  $('val-rm').textContent = p.noR ? '∞' : p.R;
+  $('val-cm').textContent =   p.noC ? '0' : Math.round(p.C * 1000);
+    $('val-imax').textContent = Math.round(p.I * 1000);
+  $('val-dur').textContent = p.dur;
+  $('slider-rm').disabled = p.noR;
+  $('slider-cm').disabled = p.noC;
+  $('res-off').setAttribute('visibility', p.noR ? 'visible' : 'hidden');
+  $('res').setAttribute('opacity', p.noR ? 0.25 : 1);
+  $('cap-off').setAttribute('visibility', p.noC ? 'visible' : 'hidden');
+  $('cap').setAttribute('opacity', p.noC ? 0.25 : 1);
+}
+
+function simulate(p) {
+  const g = p.noR ? 0 : 1 / p.R;           // µS (1/MΩ)
+  const tau = (!p.noR && !p.noC) ? p.R * p.C : null;
+  const tail = 0;
+  const T = T_TOTAL;
+  const n = Math.round(T / DT);
+  const t = new Float32Array(n), v = new Float32Array(n), i = new Float32Array(n);
+  let V = E_REST;
+  for (let k = 0; k < n; k++) {
+    const tt = k * DT;
+    const Iin = (tt >= T_PRE && tt < T_PRE + p.dur) ? p.I : 0;
+    t[k] = tt; v[k] = V; i[k] = Iin;
+    if (!p.noC) {
+      // C dV/dt = -g (V - E) + I  (exact exponential step; input held constant over the step)
+      if (g > 0) {
+        const Vinf = E_REST + Iin / g, a = Math.exp(-DT * g / p.C);
+        V = Vinf + (V - Vinf) * a;
+      } else {
+        V += DT * Iin / p.C;
+      }
+    } else {
+      V = p.noR ? E_REST : E_REST + Iin / g;
+      v[k] = V;
+    }
+  }
+  return { t, v, i, T, tau, g, p };
+}
+
+function niceRange(lo, hi) {
+  let span = Math.max(hi - lo, 5);
+  const step = [1, 2, 5, 10, 20, 50, 100, 200, 500].find(s => span / s <= 6) || 1000;
+  return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step, step];
+}
+
+function draw(upto) {
+  const W = canvas.width, H = canvas.height;
+  const L = 60, R = W - 20, Tp = 15, Bp = H - 40;
+  const split = Tp + (Bp - Tp) * 0.68;    // voltage panel above, current panel below
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = '12px Segoe UI'; ctx.fillStyle = '#b2bec3'; ctx.strokeStyle = '#636e72';
+
+  const v0 = V_MIN, v1 = V_MAX, vs = V_STEP, ihi = I_MAX_AXIS;
+  const T = T_TOTAL;
+  const X = t => L + t / T * (R - L);
+  const vTop = Tp, vBot = split - 30, iTop = split + 14, iBot = Bp;
+  const YV = v => vBot - (v - v0) / (v1 - v0) * (vBot - vTop);
+  const YI = i => iBot - i / ihi * (iBot - iTop);
+
+  // axes & grid
+  ctx.beginPath(); ctx.moveTo(L, vTop); ctx.lineTo(L, vBot); ctx.moveTo(L, iTop); ctx.lineTo(L, iBot); ctx.lineTo(R, iBot); ctx.stroke();
+  ctx.textAlign = 'right';
+  for (let v = v0; v <= v1 + 1e-9; v += vs) {
+    ctx.fillText(v, L - 6, YV(v) + 4);
+    ctx.strokeStyle = '#3f4446'; ctx.beginPath(); ctx.moveTo(L, YV(v)); ctx.lineTo(R, YV(v)); ctx.stroke();
+  }
+  ctx.fillText('0', L - 6, YI(0) + 4); ctx.fillText(Math.round(ihi * 1000), L - 6, YI(ihi) + 4);
+  ctx.textAlign = 'center';
+  const ts = 100;
+  for (let t = 0; t <= T; t += ts) ctx.fillText(t, X(t), Bp + 16);
+  ctx.fillText('time (ms)', (L + R) / 2, Bp + 33);
+  ctx.save(); ctx.translate(14, (vTop + vBot) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('Vm (mV)', 0, 0); ctx.restore();
+  ctx.save(); ctx.translate(14, (iTop + iBot) / 2); ctx.rotate(-Math.PI / 2); ctx.fillText('I (pA)', 0, 0); ctx.restore();
+
+  if (!sim) return;
+  const N = upto;
+  // everything is clipped to its panel, so values beyond the scale simply leave the plot
+  const trace = (arr, Y, color, top, bot) => {
+    ctx.save(); ctx.beginPath(); ctx.rect(L, top, R - L, bot - top); ctx.clip();
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+    for (let k = 0; k < N; k += 4) { const x = X(sim.t[k]), y = Y(arr[k]); k ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+    ctx.stroke(); ctx.restore();
+  };
+  trace(sim.v, YV, '#55efc4', vTop, vBot);
+  trace(sim.i, YI, '#fdcb6e', iTop, iBot);
+
+  // steady-state level (only drawn while inside the voltage scale)
+  if (!sim.p.noR) {
+    const Vss = E_REST + sim.p.I * sim.p.R;
+    if (Vss <= V_MAX) {
+      ctx.strokeStyle = '#ff7675'; ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(L, YV(Vss)); ctx.lineTo(R, YV(Vss)); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#ff7675'; ctx.textAlign = 'right'; ctx.fillText('V∞ = ' + Vss.toFixed(1) + ' mV', R - 4, YV(Vss) - 4);
+    }
+  }
+}
+
+function info() {
+  const p = sim.p;
+  let s;
+  if (p.noC && p.noR) s = 'No R and no C: current has nowhere to flow, so V<sub>m</sub> cannot change.';
+  else if (p.noC) s = `No capacitor: V<sub>m</sub> follows the current instantly (ΔV = I·R = ${(p.I * p.R).toFixed(1)} mV).`;
+  else if (p.noR) s = `No leak: capacitor integrates the current without limit (dV/dt = I/C = ${(p.I / p.C).toFixed(2)} mV/ms); V does not decay after the pulse.`;
+  else s = `τ = R·C = ${(p.R * p.C).toFixed(1)} ms; steady-state ΔV = I·R = ${(p.I * p.R).toFixed(1)} mV`;
+  $('info').innerHTML = s;
+}
+
+function inject() {
+  if (anim) cancelAnimationFrame(anim);
+  sim = simulate(params());
+  info();
+  const n = sim.t.length, start = performance.now(), total = 1000;
+  const step = now => {
+    const f = Math.min(1, (now - start) / total), upto = Math.max(2, Math.floor(f * n));
+    draw(upto);
+    const tNow = sim.t[upto - 1];
+    $('src-arrow').setAttribute('stroke', (tNow >= T_PRE && tNow < T_PRE + sim.p.dur) ? '#e74c3c' : '#2d3436');
+    $('src').setAttribute('fill', (tNow >= T_PRE && tNow < T_PRE + sim.p.dur) ? '#ffeaa7' : '#fff');
+    if (f < 1) anim = requestAnimationFrame(step);
+  };
+  anim = requestAnimationFrame(step);
+}
+
+['slider-rm', 'slider-cm', 'slider-imax', 'slider-dur', 'chk-rm', 'chk-cm'].forEach(id =>
+  $(id).addEventListener('input', updateLabels));
+$('btn-inject').addEventListener('click', inject);
+updateLabels();
+draw(0);
+</script>
+</body>
+</html>
