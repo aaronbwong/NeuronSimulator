@@ -6,17 +6,23 @@
   <style>
     #neuron-container {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 820px;
+      max-width: 920px;
       margin: auto;
-      padding: 20px;
+      padding: 10px 14px;
       background: #fdfdfd;
       border-radius: 12px;
       box-shadow: 0 4px 15px rgba(0,0,0,0.1);
       text-align: center;
     }
+    h2 { margin: 2px 0 6px; font-size: 18px; }
+    .main { display: flex; gap: 12px; align-items: flex-start; }
+    .left { width: 280px; flex: none; }
+    .right { flex: 1 1 0; min-width: 0; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    #btn-inhib { background: #8e44ad; color: white; }
     .btn {
-      padding: 8px 16px;
-      margin: 5px;
+      padding: 7px 8px;
+      margin: 0;
       border: none;
       border-radius: 4px;
       cursor: pointer;
@@ -31,23 +37,26 @@
     /* Sliders styling */
     .control-panel {
       display: flex;
-      justify-content: space-around;
+      flex-direction: column;
+      gap: 3px;
       background: #f1f2f6;
-      padding: 12px;
-      margin: 15px 0;
+      padding: 6px 10px;
+      margin: 8px 0 0;
       border-radius: 8px;
       border: 1px solid #dfe6e9;
     }
     .slider-group {
       display: flex;
       flex-direction: column;
-      align-items: center;
-      font-size: 13px;
+      align-items: stretch;
+      text-align: left;
+      font-size: 12px;
       font-weight: bold;
       color: #2c3e50;
     }
     .slider-group input {
-      margin-top: 5px;
+      margin: 2px 0;
+      width: 100%;
       cursor: pointer;
     }
     .slider-val {
@@ -57,12 +66,14 @@
     /* Diagram Area with relative positioning to host the overlaid canvas */
     .diagram-area {
       position: relative;
-      width: 750px;
-      height: 350px;
-      margin: 15px auto;
+      width: 100%;
+      aspect-ratio: 750 / 350;
+      margin: 0 auto;
     }
 
     svg {
+      width: 100%;
+      height: 100%;
       border: 1px solid #dfe6e9;
       border-radius: 8px;
       background: #fdfaf6;
@@ -86,21 +97,27 @@
       background: rgba(45, 52, 54, 0.85); /* Semi-transparent dark background */
       border-radius: 6px;
       position: absolute;
-      top: 15px;
-      right: 15px;
+      top: 8px;
+      right: 8px;
+      width: 64%;
+      height: auto;
       z-index: 2; /* Sits directly on top of the SVG diagram */
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
       border: 1px solid #3f4446;
     }
     .info-panel {
-      margin-top: 10px;
-      padding: 10px;
+      margin-top: 6px;
+      padding: 6px;
       background: #dfe6e9;
       border-radius: 6px;
-      font-size: 15px;
+      font-size: 13px;
       font-weight: bold;
       color: #2d3436;
-      min-height: 22px;
+      min-height: 18px;
+    }
+    @media (max-width: 720px) {
+      .main { flex-direction: column; align-items: stretch; }
+      .left { width: 100%; }
     }
   </style>
 </head>
@@ -108,12 +125,14 @@
 
 <div id="neuron-container">
   <h2>Biophysical Neuron Stimulator (LIF Model)</h2>
-  <p>Click on the components in the diagram or use the buttons below to stimulate the neuron.</p>
 
-  <div>
-    <button id="btn-synapseE1" class="btn" onclick="stimulate('synapseE1')">Trigger Synapse E1</button>
-    <button id="btn-synapse" class="btn" onclick="stimulate('synapse')">Trigger Synapse E2</button>
-    <button id="btn-electrode" class="btn" onclick="stimulate('electrode')">Inject Current</button>
+  <div class="main">
+  <div class="left">
+  <div class="btn-grid">
+    <button id="btn-e1e2" class="btn" onclick="stimulate(['E1','E2'])">E1 + E2</button>
+    <button id="btn-e1i1" class="btn" onclick="stimulate(['E1','I1'])">E1 + I1</button>
+    <button id="btn-all" class="btn" onclick="stimulate(['E1','E2','I1'])">E1 + E2 + I1</button>
+    <button id="btn-electrode" class="btn" onclick="stimulate(['electrode'])">Inject Current</button>
   </div>
 
   <!-- Parameters Control Panel with Sliders -->
@@ -127,11 +146,22 @@
       <input type="range" id="slider-gl" min="0.01" max="0.2" step="0.01" value="0.05" oninput="updateParams()">
     </div>
     <div class="slider-group">
-      <label>Synaptic Weight (d_g_syn): <span id="val-dgsyn" class="slider-val">0.02</span></label>
+      <label>E1 strength (d_g_E1): <span id="val-dgE1" class="slider-val">0.030</span></label>
+      <input type="range" id="slider-dgE1" min="0.005" max="0.1" step="0.005" value="0.03" oninput="updateParams()">
+    </div>
+    <div class="slider-group">
+      <label>E2 strength (d_g_E2): <span id="val-dgsyn" class="slider-val">0.020</span></label>
       <input type="range" id="slider-dgsyn" min="0.005" max="0.1" step="0.005" value="0.02" oninput="updateParams()">
     </div>
+    <div class="slider-group">
+      <label>I1 strength (d_g_I1): <span id="val-dgI1" class="slider-val">0.030</span></label>
+      <input type="range" id="slider-dgI1" min="0.005" max="0.1" step="0.005" value="0.03" oninput="updateParams()">
+    </div>
+  </div>
+  <div class="info-panel" id="status-panel">System Resting: -70 mV</div>
   </div>
 
+  <div class="right">
   <!-- SVG Neuron Diagram -->
   <div class="diagram-area">
   <svg width="750" height="350" viewBox="0 0 750 350">
@@ -616,6 +646,12 @@
       <text x="95" y="229" text-anchor="middle" fill="white" font-size="11" font-weight="bold">E2</text>
     </g>
 
+    <!-- SynapseI1 (Inhibitory, near soma) -->
+    <g class="interactive-part" onclick="stimulate('inhib')">
+      <circle cx="128" cy="278" r="9" fill="#8e44ad" stroke="#5b2c6f" stroke-width="2.5" />
+      <text x="128" y="282" text-anchor="middle" fill="white" font-size="11" font-weight="bold">I1</text>
+    </g>
+
     <!-- NEURON 2 -->
     <!--
     <path d="M 535 125 Q 520 125 540 100" stroke="#2980b9" stroke-width="5" fill="none" stroke-linecap="round" />
@@ -637,9 +673,10 @@
   </svg>
 
   <!-- Membrane Potential Oscilloscope Trace -->
-  <canvas id="oscilloscope" width="450" height="150"></canvas>
+  <canvas id="oscilloscope" width="600" height="420"></canvas>
   </div>
-  <div class="info-panel" id="status-panel">System Resting: -70 mV</div>
+  </div>
+  </div>
 </div>
 
 <script>
@@ -651,20 +688,27 @@
   const height = canvas.height;
 
   let dataPoints = Array(width).fill(-70);
+  let excPoints = Array(width).fill(0);
+  let inhPoints = Array(width).fill(0);
+  let injPoints = Array(width).fill(0);
 
   // Biophysical parameters
   let C_m = 1.0;
   let g_L = 0.05;
   const E_L = -70.0;
   const E_syn = 0.0;
+  const E_inh = -80.0; // Cl- reversal, below rest so I1 hyperpolarizes
   const k_syn = 0.2; // proportion decay per time step
   let d_g_syn = 0.02;
+  let d_g_E1 = 0.03;
+  let d_g_I1 = 0.03;
 
   const V_threshold = -50.0;
   const V_reset = -75.0;
 
   let V_m = -70.0;
   let g_syn = 0.0;
+  let g_inh = 0.0;
   let I_inj = 0.0;
 
   let refractoryTicks = 0;
@@ -676,25 +720,44 @@
     C_m = parseFloat(document.getElementById('slider-cm').value);
     g_L = parseFloat(document.getElementById('slider-gl').value);
     d_g_syn = parseFloat(document.getElementById('slider-dgsyn').value);
+    d_g_E1 = parseFloat(document.getElementById('slider-dgE1').value);
+    d_g_I1 = parseFloat(document.getElementById('slider-dgI1').value);
 
     document.getElementById('val-cm').innerText = C_m.toFixed(1);
     document.getElementById('val-gl').innerText = g_L.toFixed(2);
     document.getElementById('val-dgsyn').innerText = d_g_syn.toFixed(3);
+    document.getElementById('val-dgE1').innerText = d_g_E1.toFixed(3);
+    document.getElementById('val-dgI1').innerText = d_g_I1.toFixed(3);
   }
 
+  const SYN_KEYS = { E1: 'synapseE1', E2: 'synapse', I1: 'inhib', electrode: 'electrode' };
+
   function stimulate(type) {
+    if (Array.isArray(type)) {
+      const msg = type.join(' + ');
+      type.forEach(t => stimulate(SYN_KEYS[t]));
+      if (type.length > 1) {
+        statusPanel.innerHTML = msg + " triggered simultaneously";
+        statusPanel.style.color = "#2d3436";
+      }
+      return;
+    }
     if (type === 'synapseE1') {
-      g_syn += 0.03;
-      statusPanel.innerHTML = "Receptor Triggered: Excitatory Synaptic Conductance (g_syn) opened!";
+      g_syn += d_g_E1;
+      statusPanel.innerHTML = "E1 triggered: excitatory conductance opened!";
       statusPanel.style.color = "#d35400";
+    } else if (type === 'inhib') {
+      g_inh += d_g_I1;
+      statusPanel.innerHTML = "I1 triggered: inhibitory conductance opened!";
+      statusPanel.style.color = "#8e44ad";
     } else if (type === 'electrode') {
       I_inj = 1.0;
       injectionTicks = 100;
-      statusPanel.innerHTML = "Electrode Stimulated: Injecting negative current (I_inj = -2.5 pA)!";
+      statusPanel.innerHTML = "Electrode Stimulated: Injecting current (I_inj = 1.0)!";
       statusPanel.style.color = "#f39c12";
     } else if (type === 'synapse') {
       g_syn += d_g_syn;
-      statusPanel.innerHTML = "Synaptic Input: Heavy depolarization triggered!";
+      statusPanel.innerHTML = "E2 triggered: excitatory conductance opened!";
       statusPanel.style.color = "#2980b9";
     }
   }
@@ -706,6 +769,7 @@
       I_inj = 0.0;
     }
     g_syn += (0.0 - g_syn) * k_syn;
+    g_inh += (0.0 - g_inh) * k_syn;
 
     if (refractoryTicks > 0) {
       refractoryTicks--;
@@ -716,7 +780,7 @@
       isSpiking = false;
       refractoryTicks = 0;
     } else {
-      let dV = (g_L * (E_L - V_m) + g_syn * (E_syn - V_m) + I_inj) / C_m;
+      let dV = (g_L * (E_L - V_m) + g_syn * (E_syn - V_m) + g_inh * (E_inh - V_m) + I_inj) / C_m;
       V_m += dV * dt;
 
       if (V_m >= V_threshold) {
@@ -727,6 +791,39 @@
 
     dataPoints.shift();
     dataPoints.push(V_m);
+    // depolarizing-positive currents (inward positive)
+    excPoints.shift(); excPoints.push(g_syn * (E_syn - V_m));
+    inhPoints.shift(); inhPoints.push(g_inh * (E_inh - V_m));
+    injPoints.shift(); injPoints.push(I_inj);
+  }
+
+  const hV = 250;                 // height of voltage panel (px); current panel below
+  const I_MIN = -3, I_MAX = 6;    // fixed current scale
+  const yI = i => height - 6 - (i - I_MIN) / (I_MAX - I_MIN) * (height - hV - 30);
+
+  function drawCurrents() {
+    const top = hV + 14;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, top, width, height - top); ctx.clip();
+    ctx.strokeStyle = '#3f4446'; ctx.lineWidth = 1; ctx.font = '14px monospace';
+    for (let i = I_MIN; i <= I_MAX; i += 3) {
+      ctx.beginPath(); ctx.moveTo(0, yI(i)); ctx.lineTo(width, yI(i)); ctx.stroke();
+      ctx.fillStyle = '#8f9496'; ctx.fillText(i + ' (a.u.)', 5, yI(i) - 3);
+    }
+    const line = (arr, color) => {
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath();
+      for (let i = 0; i < width; i++) { const y = yI(arr[i]); i ? ctx.lineTo(i, y) : ctx.moveTo(i, y); }
+      ctx.stroke();
+    };
+    line(excPoints, '#e67e22');
+    line(inhPoints, '#c39bd3');
+    line(injPoints, '#f1c40f');
+    ctx.restore();
+    ctx.font = '13px monospace'; ctx.textAlign = 'right';
+    ctx.fillStyle = '#e67e22'; ctx.fillText('I_exc', width - 130, hV + 28);
+    ctx.fillStyle = '#c39bd3'; ctx.fillText('I_inh', width - 70, hV + 28);
+    ctx.fillStyle = '#f1c40f'; ctx.fillText('I_inj', width - 10, hV + 28);
+    ctx.textAlign = 'left';
   }
 
   function drawTrace() {
@@ -735,20 +832,20 @@
     // Grid Lines
     ctx.strokeStyle = '#3f4446';
     ctx.lineWidth = 1;
-    for(let y = 20; y < height; y += 30) {
+    for(let y = 20; y < hV; y += 40) {
       ctx.beginPath();
       ctx.moveTo(0, y);
       ctx.lineTo(width, y);
       ctx.stroke();
 
-      let mvValue = Math.round(40 - (y / height) * 140);
+      let mvValue = Math.round(40 - (y / hV) * 140);
       ctx.fillStyle = '#8f9496';
-      ctx.font = '10px monospace';
-      ctx.fillText(mvValue + " mV", 5, y - 2);
+      ctx.font = '14px monospace';
+      ctx.fillText(mvValue + " mV", 5, y - 3);
     }
 
     // Threshold (-50 mV)
-    let thresholdY = ((40 - (V_threshold)) / 140) * height;
+    let thresholdY = ((40 - (V_threshold)) / 140) * hV;
     ctx.strokeStyle = 'rgba(231, 76, 60, 0.6)';
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
@@ -757,7 +854,7 @@
     ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = 'rgba(231, 76, 60, 0.8)';
-    ctx.fillText("Threshold", width - 70, thresholdY - 4);
+    ctx.font = "14px monospace"; ctx.fillText("Threshold", width - 90, thresholdY - 4);
 
     // Trace Path
     ctx.strokeStyle = '#00ffcc';
@@ -767,7 +864,7 @@
     ctx.beginPath();
 
     for (let i = 0; i < width; i++) {
-      let y = ((40 - dataPoints[i]) / 140) * height;
+      let y = ((40 - dataPoints[i]) / 140) * hV;
       if (i === 0) {
         ctx.moveTo(i, y);
       } else {
@@ -776,6 +873,10 @@
     }
     ctx.stroke();
     ctx.shadowBlur = 0;
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#636e72';
+    ctx.beginPath(); ctx.moveTo(0, hV + 7); ctx.lineTo(width, hV + 7); ctx.stroke();
+    drawCurrents();
   }
 
   function loop() {
